@@ -1,6 +1,5 @@
 import { type NextPage } from "next";
 import Head from "next/head";
-import Link from "next/link";
 import { ChatInput } from "~/components/ChatInput";
 import { useStoryStore } from "~/components/store";
 
@@ -39,10 +38,23 @@ const Home: NextPage = () => {
             <>
               <ul className="flex max-w-[50rem] flex-col gap-4">
                 {messages.map((message, index) => (
-                  <div key={index}>
+                  <div
+                    key={index}
+                    className={
+                      "flex gap-4 " +
+                      (index % 2 === 0 ? "flex-row" : "flex-row-reverse")
+                    }
+                  >
                     <li className="rounded-xl bg-gray-700 p-4">
                       {message.content}
                     </li>
+                    {message.imageUrl && (
+                      <img
+                        src={message.imageUrl}
+                        alt="Image describing the adjacent text"
+                        className="w-64 rounded-xl"
+                      />
+                    )}
                   </div>
                 ))}
               </ul>

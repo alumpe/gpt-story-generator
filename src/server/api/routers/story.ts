@@ -11,6 +11,8 @@ const systemMessage = {
     "You are a story teller that lets the user choose how to continue the story.",
 } as const;
 
+export type ChatMessage = ChatCompletionRequestMessage & { imageUrl?: string };
+
 export const storyRouter = createTRPCRouter({
   start: publicProcedure
     .input(
@@ -43,8 +45,17 @@ export const storyRouter = createTRPCRouter({
       const newMessage = response.data.choices[0]?.message;
       if (!newMessage) throw new TRPCError({ code: "BAD_REQUEST" });
 
+      const imageResponse = await openai.createImage({
+        prompt: newMessage.content,
+        n: 1,
+        size: "512x512",
+      });
+
+      const imageUrl = imageResponse.data.data[0]?.url;
+      console.log(imageUrl);
+
       return {
-        messages: [initialUserMessage, newMessage],
+        messages: [initialUserMessage, { ...newMessage, imageUrl }],
       };
     }),
   continue: publicProcedure
@@ -53,6 +64,7 @@ export const storyRouter = createTRPCRouter({
         z.object({
           role: z.enum(["system", "assistant", "user"]),
           content: z.string(),
+          imageUrl: z.string().optional(),
         })
       )
     )
@@ -61,14 +73,14 @@ export const storyRouter = createTRPCRouter({
 
       const nextUserMessage = {
         role: "user",
-        content: "Continue the story.",
+        content: "Continue the story for 3 more sentences.",
       } as const;
 
       const response = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: [
           systemMessage,
-          ...(messages as ChatCompletionRequestMessage[]),
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
           nextUserMessage,
         ],
 
@@ -81,8 +93,17 @@ export const storyRouter = createTRPCRouter({
       const newMessage = response.data.choices[0]?.message;
       if (!newMessage) throw new TRPCError({ code: "BAD_REQUEST" });
 
+      const imageResponse = await openai.createImage({
+        prompt: newMessage.content,
+        n: 1,
+        size: "512x512",
+      });
+
+      const imageUrl = imageResponse.data.data[0]?.url;
+      console.log(imageUrl);
+
       return {
-        messages: [...messages, nextUserMessage, newMessage],
+        messages: [...messages, nextUserMessage, { ...newMessage, imageUrl }],
       };
     }),
 });
